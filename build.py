@@ -37,10 +37,17 @@ def main() -> int:
         "--onefile",
         "--windowed",
         "--noconfirm",
-        "--add-data",    f"{ASSETS_DIR}{sep}assets",
         "--hidden-import", "openpyxl",
+        "--hidden-import", "openpyxl.cell._writer",
         "--hidden-import", "PySide6.QtSvg",
+        "--hidden-import", "PySide6.QtCore",
+        "--hidden-import", "PySide6.QtGui",
+        "--hidden-import", "PySide6.QtWidgets",
+        "--collect-all",   "openpyxl",
     ]
+    # Only add assets if the folder exists and is not empty
+    if ASSETS_DIR.exists() and any(ASSETS_DIR.rglob("*.*")):
+        args += ["--add-data", f"{ASSETS_DIR}{sep}assets"]
     if ICON_PATH.exists():
         args += ["--icon", str(ICON_PATH)]
 
