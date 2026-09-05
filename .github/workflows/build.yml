@@ -1,0 +1,72 @@
+name: Build MetonymyStudio.exe
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  # Also lets you trigger a build manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Windows Executable
+    runs-on: windows-latest
+
+    steps:
+      # ── 1. Check out your code ────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Python ──────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ── 3. Install dependencies ───────────────────────────────────────────
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PySide6 openpyxl pyinstaller
+
+      # ── 4. Run tests (no Qt display needed — pure logic tests) ────────────
+      - name: Run tests
+        run: |
+          pip install pytest
+          python -m pytest tests/ -v
+
+      # ── 5. Build the .exe ─────────────────────────────────────────────────
+      - name: Build MetonymyStudio.exe
+        run: python build.py
+
+      # ── 6. Upload the .exe as a downloadable artifact ────────────────────
+      #       Go to Actions → your run → scroll down → Artifacts → Download
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MetonymyStudio-Windows
+          path: dist/MetonymyStudio.exe
+          retention-days: 30
+
+  # ── Release job: runs only when you push a version tag (e.g. v1.0.0) ─────
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    # Only runs when you push a tag like v1.0.0
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: MetonymyStudio-Windows
+
+      - name: Create Release and upload .exe
+        uses: softprops/action-gh-release@v2
+        with:
+          files: MetonymyStudio.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
